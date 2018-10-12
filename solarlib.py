@@ -33,7 +33,8 @@ def SolarIrradiance(Latitude,DayOfYear,HourOfDay):
     '''
     z=ZenithAngle(Latitude,DayOfYear,HourOfDay)
     irr=1050.*np.cos(z*deg2rad)
-    irr[irr<0]=0
+    if irr<0:
+        irr=0
     return irr
 def DailyIrradiance(Latitude,DayOfYear,display=False):
     '''
@@ -42,7 +43,7 @@ def DailyIrradiance(Latitude,DayOfYear,display=False):
     DayOfYear: 0 for January 1st
     '''
     h=np.linspace(0,24,24*12+1)
-    irr=SolarIrradiance(Latitude,DayOfYear,h)
+    irr=np.array([SolarIrradiance(Latitude,DayOfYear,hr) for hr in h])
     if display:
         plt.plot(h,irr)
     return h,irr
