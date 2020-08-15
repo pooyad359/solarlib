@@ -1,1 +1,1 @@
-# solarlib
+# SolarLib
