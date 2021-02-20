@@ -1,35 +1,39 @@
 import datetime
 from math import degrees, radians, atan2, asin, acos, sin, cos
+from solarlib.calendar import julian_century
 
-
-def geom_mean_long(julian_cent):
+def geom_mean_long(time):
     '''
     Sun mean longitude (degrees)
     '''
+    julian_cent = julian_century(time)
     angle = 280.46646 + julian_cent * (julian_cent * 3.032e-4 + 36000.76983)
     return angle % 360
 
 
-def geom_mean_anom(julian_cent):
+def geom_mean_anom(time):
     '''
     Sun Mean Anomaly (degrees)
     '''
+    julian_cent = julian_century(time)
     angle = 357.52911 + julian_cent * (35999.05029 - julian_cent * 1.537e-4)
     return angle
 
 
-def eccent_earth_orbit(julian_cent):
+def eccent_earth_orbit(time):
     '''
     Eccentricity of Earth orbit
     '''
+    julian_cent = julian_century(time)
     return 0.016708634 - julian_cent * (4.2037e-5 + 1.267e-7 * julian_cent)
 
 
-def equation_of_center(julian_cent):
+def equation_of_center(time):
     '''
     Sun Equation of Center
     '''
-    anom = geom_mean_anom(julian_cent)
+    julian_cent = julian_century(time)
+    anom = geom_mean_anom(time)
     anom = radians(anom)
     t1 = sin(anom) * (1.914602 - julian_cent * (0.004817 + 1.4e-5 * julian_cent))
     t2 = sin(2 * anom) * (0.019993 - 0.000101 * julian_cent)
@@ -37,62 +41,65 @@ def equation_of_center(julian_cent):
     return t1 + t2 + t3
 
 
-def true_longitude(julian_cent):
-    return geom_mean_long(julian_cent) + equation_of_center(julian_cent)
+def true_longitude(time):
+    return geom_mean_long(time) + equation_of_center(time)
 
 
-def true_anomaly(julian_cent):
-    return geom_mean_anom(julian_cent) + equation_of_center(julian_cent)
+def true_anomaly(time):
+    return geom_mean_anom(time) + equation_of_center(time)
 
 
-def rad_vector(julian_cent):
+def rad_vector(time):
     '''
     in Astronomical Unit (AUs)
     '''
-    ecc = eccent_earth_orbit(julian_cent)
-    anom = true_anomaly(julian_cent)
+    ecc = eccent_earth_orbit(time)
+    anom = true_anomaly(time)
     return (1.000001018 * (1 - ecc * ecc)) / (1 + ecc * cos(radians(anom)))
 
 
-def app_long(julian_cent):
-    tlon = true_longitude(julian_cent)
+def app_long(time):
+    julian_cent = julian_century(time)
+    tlon = true_longitude(time)
     return tlon - 0.00569 - 0.00478 * sin(
         radians(125.04 - 1934.136 * julian_cent))
 
 
-def mean_obliq_ecliptic(julian_cent):
+def mean_obliq_ecliptic(time):
+    julian_cent = julian_century(time)
     res = 46.815 + julian_cent * (0.00059 - julian_cent * 0.001813)
     res = 21.448 - julian_cent * (res)
     res = 23 + (26 + res / 60) / 60
     return res
 
 
-def obeliq_corr(julian_cent):
-    moe = mean_obliq_ecliptic(julian_cent)
+def obeliq_corr(time):
+    julian_cent = julian_century(time)
+    moe = mean_obliq_ecliptic(time)
     return moe + 0.00256 * cos(radians(125.04 - 1934.136 * julian_cent))
 
 
-def solar_ascention(julian_cent):
-    lon = app_long(julian_cent)
-    oblq = obeliq_corr(julian_cent)
+def solar_ascention(time):
+    lon = app_long(time)
+    oblq = obeliq_corr(time)
     a = cos(radians(oblq)) * sin(radians(lon))
     b = cos(radians(lon))
     ascn = atan2(a, b)
     return degrees(ascn)
 
 
-def solar_declination(julian_cent):
-    lon = app_long(julian_cent)
-    oblq = obeliq_corr(julian_cent)
+def solar_declination(time):
+    lon = app_long(time)
+    oblq = obeliq_corr(time)
     decn = asin(sin(radians(oblq)) * sin(radians(lon)))
     return degrees(decn)
 
 
-def equation_of_time(julian_cent):
-    oblq = obeliq_corr(julian_cent)
-    lon = geom_mean_long(julian_cent) 
-    anom = geom_mean_anom(julian_cent) 
-    ecc = eccent_earth_orbit(julian_cent) 
+def equation_of_time(time):
+    oblq = obeliq_corr(time)
+    lon = geom_mean_long(time) 
+    anom = geom_mean_anom(time) 
+    ecc = eccent_earth_orbit(time) 
     var_y = tan(radians(oblq / 2)) * tan(radians(oblq / 2))
     result = [
         var_y * sin(2 * radians(lon)), -2 * ecc * sin(radians(anom)),
@@ -103,8 +110,8 @@ def equation_of_time(julian_cent):
     return 4 * degrees(sum(result))
 
 
-def sunrise_hour_angle(julian_cent, latitude):
-    decn = radians(solar_declination(julian_cent))
+def sunrise_hour_angle(time, latitude):
+    decn = radians(solar_declination(time))
     a1 = cos(radians(90.833)) / (cos(radians(latitude)) * cos(decn))
     a2 = tan(radians(latitude)) * tan(decn)
     return degrees(acos(a1 - a2))
