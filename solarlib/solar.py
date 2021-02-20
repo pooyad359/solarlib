@@ -1,6 +1,9 @@
 import datetime
-from math import degrees, radians, atan2, asin, acos, sin, cos
+import pytz
+from math import degrees, radians, atan2, asin, acos, sin, cos, tan
 from solarlib.calendar import julian_century
+from solarlib.utils import get_minutes
+
 
 def geom_mean_long(time):
     '''
@@ -124,10 +127,11 @@ def solar_noon(time, longitude):
     tz = time.tzinfo
     utc = pytz.timezone('UTC')
     julian_cent = julian_century(time)
-    eot = equation_of_time(julian_cent)
+    eot = equation_of_time(time)
     noon_offset = (720 - 4 * longitude - eot) / 1440
-    midnight = datetime.datetime.combine(
-        time.date(), datetime.time(tzinfo=pytz.timezone('UTC')))
+    base_time = datetime.time()
+    midnight = datetime.datetime.combine(time.date(), base_time)
+    midnight = utc.localize(midnight)
     noon_utc = midnight + datetime.timedelta(days=noon_offset)
     return noon_utc.astimezone(tz)
 
@@ -138,7 +142,7 @@ def sunrise(time, latitude, longitude):
     '''
     noon = solar_noon(time, longitude)
     julian_cent = julian_century(time)
-    hour_angle = sunrise_hour_angle(julian_cent, latitude)
+    hour_angle = sunrise_hour_angle(time, latitude)
     delta = datetime.timedelta(minutes=4 * hour_angle)
     return noon - delta
 
@@ -149,7 +153,7 @@ def sunset(time, latitude, longitude):
     '''
     noon = solar_noon(time, longitude)
     julian_cent = julian_century(time)
-    hour_angle = sunrise_hour_angle(julian_cent, latitude)
+    hour_angle = sunrise_hour_angle(time, latitude)
     delta = datetime.timedelta(minutes=4 * hour_angle)
     return noon + delta
 
@@ -159,7 +163,7 @@ def daytime_length(time, latitude):
     Length of day time (Sunlight duration) in hours.
     '''
     julian_cent = julian_century(time)
-    hour_angle = sunrise_hour_angle(julian_cent, latitude)
+    hour_angle = sunrise_hour_angle(time, latitude)
     return 8 * hour_angle / 60
 
 
@@ -169,7 +173,7 @@ def true_solar_time(time, longitude):
     '''
     utc = pytz.timezone('UTC')
     julian_cent = julian_century(time)
-    eot = equation_of_time(julian_cent)
+    eot = equation_of_time(time)
     delta = datetime.timedelta(minutes=eot + longitude * 4)
     true_time = (time + delta).astimezone(utc)
     hour = true_time.hour
@@ -189,7 +193,7 @@ def solar_zenith(time, latitude, longitude):
     Solar Zenith Angle in degrees
     '''
     julian_cent = julian_century(time)
-    decn = solar_declination(julian_cent)
+    decn = solar_declination(time)
     h_angle = hour_angle(time, longitude)
     a1 = sin(radians(latitude)) * sin(radians(decn))
     a2 = cos(radians(latitude)) * cos(radians(decn)) * cos(radians(h_angle))
@@ -237,7 +241,7 @@ def solar_azimuth(time, latitude, longitude):
     '''
     julian_cent = julian_century(time)
     zenith = radians(solar_zenith(time, latitude, longitude))
-    decln = radians(solar_declination(julian_cent))
+    decln = radians(solar_declination(time))
     h_angle = hour_angle(time, longitude)
     lat = radians(latitude)
     if h_angle > 0:
