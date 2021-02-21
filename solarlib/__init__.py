@@ -1,2 +1,1 @@
-from .solarlib import *
 
